@@ -1,0 +1,62 @@
+import groovy.json.JsonParserType
+import groovy.json.JsonSlurper
+import groovy.transform.Field
+
+import java.nio.file.Files
+import java.lang.Exception
+
+FileCollection spigot(String rev) {
+    return project.files(
+        new File(project.buildDir, "buildtools${File.separator}${rev}${File.separator} spigot-" +
+                getMinecraftVersionFromJsonFile(new File(buildTools(rev), "BuildData${File.separator}info.json")) +
+                ".jar"))
+}
+
+FileCollection spigotApi(String rev) {
+    return project.files(
+        new File(project.buildDir, "buildtools${File.separator}${rev}${File.separator}Spigot${File.separator}" +
+                "Spigot-API${File.separator}target${File.separator}spigot-api-" +
+                getMinecraftVersionFromJsonFile(new File(buildTools(rev), "BuildData${File.separator}info.json")) +
+                "-R0.1-SNAPSHOT.jar")
+    )
+}
+
+static String getMinecraftVersionFromJsonFile(File file) {
+    JsonSlurper jsonSlurper = new JsonSlurper(type: JsonParserType.INDEX_OVERLAY)
+    def object = jsonSlurper.parse(file)
+
+    return object.minecraftVersion
+}
+
+@Field def buildToolsAlreadyDownloaded = false
+File buildTools(String rev) {
+    def buildToolsDir = new File(project.buildDir, "buildtools")
+    def buildToolsJar = new File(buildToolsDir, "buildtools.jar")
+    buildToolsDir.mkdirs()
+
+    if (!buildToolsAlreadyDownloaded || !buildToolsJar.exists()) {
+        if (buildToolsJar.exists()) buildToolsJar.delete()
+        HttpURLConnection connection = new URL("https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar")
+                .openConnection() as HttpURLConnection
+        connection.doInput = true
+        Files.copy(connection.inputStream, buildToolsJar.toPath())
+        buildToolsAlreadyDownloaded = true
+    }
+
+    def workDir = new File(buildToolsDir, rev)
+    workDir.mkdirs()
+    def processBuilder = new ProcessBuilder("java", "-jar", "-Xmx1G", buildToolsJar.absolutePath,
+            "--rev", rev, "--compile-if-changed")
+            .directory(workDir)
+            .inheritIO()
+
+    def process = processBuilder.start()
+    process.waitFor()
+    if (process.exitValue() != 0) {
+        throw Exception("See logs in ${workDir.absolutePath}${File.separator}BuildTools.log.txt")
+    }
+    return workDir
+}
+
+dependencies.ext.spigot = this.&spigot
+dependencies.ext.spigotApi = this.&spigotApi
