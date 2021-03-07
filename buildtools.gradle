@@ -5,6 +5,18 @@ import groovy.transform.Field
 import java.nio.file.Files
 import java.lang.Exception
 
+class BuildToolsConfiguration {
+    String maxHeapSize = "1G"
+
+     void configure(Closure configureClosure) {
+         Closure withNewOwner = configureClosure.rehydrate(this, configureClosure.owner, configureClosure.thisObject)
+         withNewOwner.call()
+    }
+}
+
+@Field BuildToolsConfiguration configuration = new BuildToolsConfiguration()
+@Field boolean buildToolsAlreadyDownloaded = false
+
 FileCollection spigot(String rev) {
     return project.files(
         new File(project.buildDir, "buildtools${File.separator}${rev}${File.separator} spigot-" +
@@ -28,7 +40,6 @@ static String getMinecraftVersionFromJsonFile(File file) {
     return object.minecraftVersion
 }
 
-@Field def buildToolsAlreadyDownloaded = false
 File buildTools(String rev) {
     def buildToolsDir = new File(project.buildDir, "buildtools")
     def buildToolsJar = new File(buildToolsDir, "buildtools.jar")
@@ -45,18 +56,19 @@ File buildTools(String rev) {
 
     def workDir = new File(buildToolsDir, rev)
     workDir.mkdirs()
-    def processBuilder = new ProcessBuilder("java", "-jar", "-Xmx1G", buildToolsJar.absolutePath,
+    def processBuilder = new ProcessBuilder("java", "-jar", "-Xmx${configuration.maxHeapSize}", buildToolsJar.absolutePath,
             "--rev", rev, "--compile-if-changed")
             .directory(workDir)
-            .inheritIO()
-
+            .redirectOutput(new File(buildToolsDir,"BuildTools.log.txt"))
+    processBuilder.redirectErrorStream()
     def process = processBuilder.start()
     process.waitFor()
     if (process.exitValue() != 0) {
-        throw Exception("See logs in ${workDir.absolutePath}${File.separator}BuildTools.log.txt")
+        throw new Exception("Buildtools exited with ${process.exitValue()}. See logs in ${buildToolsDir.absolutePath}${File.separator}BuildTools.log.txt")
     }
     return workDir
 }
 
 dependencies.ext.spigot = this.&spigot
 dependencies.ext.spigotApi = this.&spigotApi
+project.ext.buildtools = this.configuration.&configure
