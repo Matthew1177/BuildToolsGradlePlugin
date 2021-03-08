@@ -57,7 +57,7 @@ File buildTools(String rev) {
 
     def workDir = new File(buildToolsDir, rev)
     workDir.mkdirs()
-    def processBuilder = new ProcessBuilder(configuration.java, "-jar", "-Xmx${configuration.maxHeapSize}", buildToolsJar.absolutePath,
+    def processBuilder = new ProcessBuilder(configuration.javaExecutable, "-jar", "-Xmx${configuration.maxHeapSize}", buildToolsJar.absolutePath,
             "--rev", rev, "--compile-if-changed")
             .directory(workDir)
             .redirectOutput(new File(buildToolsDir,"BuildTools.log.txt"))
