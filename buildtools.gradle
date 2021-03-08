@@ -7,6 +7,7 @@ import java.lang.Exception
 
 class BuildToolsConfiguration {
     String maxHeapSize = "1G"
+    String java = "java"
 
      void configure(Closure configureClosure) {
          Closure withNewOwner = configureClosure.rehydrate(this, configureClosure.owner, configureClosure.thisObject)
@@ -56,7 +57,7 @@ File buildTools(String rev) {
 
     def workDir = new File(buildToolsDir, rev)
     workDir.mkdirs()
-    def processBuilder = new ProcessBuilder("java", "-jar", "-Xmx${configuration.maxHeapSize}", buildToolsJar.absolutePath,
+    def processBuilder = new ProcessBuilder(configuration.java, "-jar", "-Xmx${configuration.maxHeapSize}", buildToolsJar.absolutePath,
             "--rev", rev, "--compile-if-changed")
             .directory(workDir)
             .redirectOutput(new File(buildToolsDir,"BuildTools.log.txt"))
