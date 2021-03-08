@@ -61,7 +61,7 @@ File buildTools(String rev) {
             "--rev", rev, "--compile-if-changed")
             .directory(workDir)
             .redirectOutput(new File(buildToolsDir,"BuildTools.log.txt"))
-    processBuilder.redirectErrorStream()
+    processBuilder.redirectErrorStream(true)
     def process = processBuilder.start()
     process.waitFor()
     if (process.exitValue() != 0) {
