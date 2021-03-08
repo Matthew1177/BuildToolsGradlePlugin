@@ -7,7 +7,7 @@ import java.lang.Exception
 
 class BuildToolsConfiguration {
     String maxHeapSize = "1G"
-    String java = "java"
+    String javaExecutable = "java"
 
      void configure(Closure configureClosure) {
          Closure withNewOwner = configureClosure.rehydrate(this, configureClosure.owner, configureClosure.thisObject)
